@@ -1,0 +1,9 @@
+[package]
+name = "image-to-ASCII"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = "0.24"
+termcolor = "1.4"
+rusttype = "0.9"
