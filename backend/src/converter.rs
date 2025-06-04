@@ -1,9 +1,14 @@
 use image::{GenericImageView, Rgb};
 use std::error::Error;
-use std::io::Write;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use serde::Serialize;
 
 pub struct Converter;
+
+#[derive(Serialize)]
+pub struct AsciiPixel {
+    pub ch: char,
+    pub rgb: [u8; 3],
+}
 
 impl Converter {
     // Helper function to adjust RGB color for brightness
@@ -15,7 +20,7 @@ impl Converter {
         [new_r, new_g, new_b]
     }
 
-    pub fn convert(image_path: &str, output_width: u32, brightness_factor: f32, use_background: bool) -> Result<(), Box<dyn Error>> {
+    pub fn convert(image_path: &str, output_width: u32, brightness_factor: f32, _use_background: bool) -> Result<Vec<Vec<AsciiPixel>>, Box<dyn Error>> {
         // ASCII characters from darkest to lightest
         const ASCII_CHARS: &[char] = &[
             ' ', '.', ':', ',', '-', '=', '+', '*', '@', '#',
@@ -39,31 +44,20 @@ impl Converter {
             output_height,
             image::imageops::FilterType::Nearest,
         );
-        let mut stdout = StandardStream::stdout(ColorChoice::Always);
-        let mut color_spec = ColorSpec::new();
+        let mut ascii_grid = Vec::with_capacity(output_height as usize);
         for y in 0..output_height {
+            let mut row = Vec::with_capacity(output_width as usize);
             for x in 0..output_width {
                 let pixel_gray = img_gray.get_pixel(x, y);
                 let intensity = pixel_gray[0];
                 let index = (intensity as usize * (ASCII_CHARS.len() - 1)) / 255;
                 let ascii_char = ASCII_CHARS[index];
                 let pixel_rgb = img_rgb.get_pixel(x, y);
-                let [r, g, b] = Self::adjust_color(pixel_rgb, brightness_factor);
-                color_spec.set_fg(Some(Color::Rgb(r, g, b)));
-                if use_background {
-                    let bg_r = 255 - r;
-                    let bg_g = 255 - g;
-                    let bg_b = 255 - b;
-                    color_spec.set_bg(Some(Color::Rgb(bg_r, bg_g, bg_b)));
-                } else {
-                    color_spec.set_bg(None);
-                }
-                stdout.set_color(&color_spec)?;
-                write!(&mut stdout, "{}", ascii_char)?;
+                let rgb = Self::adjust_color(pixel_rgb, brightness_factor);
+                row.push(AsciiPixel { ch: ascii_char, rgb });
             }
-            stdout.reset()?;
-            writeln!(&mut stdout)?;
+            ascii_grid.push(row);
         }
-        Ok(())
+        Ok(ascii_grid)
     }
 }
