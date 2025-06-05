@@ -20,14 +20,14 @@ impl Converter {
         [new_r, new_g, new_b]
     }
 
-    pub fn convert(image_path: &str, output_width: u32, brightness_factor: f32, _use_background: bool) -> Result<Vec<Vec<AsciiPixel>>, Box<dyn Error>> {
+    pub fn convert_from_bytes(image_bytes: &[u8], output_width: u32, brightness_factor: f32, _use_background: bool) -> Result<Vec<Vec<AsciiPixel>>, Box<dyn Error>> {
         // ASCII characters from darkest to lightest
         const ASCII_CHARS: &[char] = &[
             ' ', '.', ':', ',', '-', '=', '+', '*', '@', '#',
             '%', '&', 'o', '0', 'O', '8', 'B', '#', '▒', '█',
         ];
 
-        let img = image::open(image_path)?;
+        let img = image::load_from_memory(image_bytes)?;
         let (width, height) = img.dimensions();
         let img_gray = img.to_luma8();
         let aspect_ratio = height as f32 / width as f32;
