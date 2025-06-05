@@ -68,7 +68,7 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
                 character_set: input.character_set.unwrap_or_else(|| converter::Converter::DEFAULT_CHARS.to_vec()),
                 output_width: input.output_width.unwrap_or(200),
                 output_height: input.output_height,
-                brightness_factor: input.brightness_factor.unwrap_or(1.0),
+                brightness_factor: input.brightness_factor.unwrap_or(1.5),
                 contrast_factor: input.contrast_factor.unwrap_or(1.0),
                 is_color: input.is_color.unwrap_or(false),
                 aspect_ratio_correction: input.aspect_ratio_correction.unwrap_or(0.55),
