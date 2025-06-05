@@ -67,13 +67,13 @@ impl Converter {
     // Adjust RGB color for brightness and contrast
     fn adjust_color(rgb: &Rgb<u8>, brightness: f32, contrast: f32) -> [u8; 3] {
         let [r, g, b] = [rgb[0] as f32, rgb[1] as f32, rgb[2] as f32];
-        // Apply contrast (centered around 128)
-        let contrast_adj = |v: f32| ((v - 128.0) * contrast + 128.0).clamp(0.0, 255.0);
-        // Apply brightness
-        let new_r = (contrast_adj(r) * brightness).clamp(0.0, 255.0) as u8;
-        let new_g = (contrast_adj(g) * brightness).clamp(0.0, 255.0) as u8;
-        let new_b = (contrast_adj(b) * brightness).clamp(0.0, 255.0) as u8;
-        [new_r, new_g, new_b]
+        // Apply brightness first, then contrast
+        let adjust = |v: f32| (((v * brightness - 128.0) * contrast) + 128.0).clamp(0.0, 255.0);
+        [
+            adjust(r) as u8,
+            adjust(g) as u8,
+            adjust(b) as u8,
+        ]
     }
 
     // Map pixel intensity to a character
@@ -87,7 +87,8 @@ impl Converter {
         config: ConverterConfig
     ) -> Result<Vec<Vec<AsciiPixel>>, ConverterError> {
         Self::validate_config(&config)?;
-
+        println!("Brightness: {}, Contrast: {}, Color: {}", 
+                 config.brightness_factor, config.contrast_factor, config.is_color);
         // Load and process image
         let img = image::load_from_memory(image_bytes)?;
         let (width, height) = img.dimensions();
