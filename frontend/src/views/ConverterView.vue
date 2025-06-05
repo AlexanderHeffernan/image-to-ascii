@@ -1,8 +1,57 @@
 <template>
-  <div class="converter">
-    <h1>Convert Here</h1>
-  </div>
+	<h1>Convert Here</h1>
+	<input type="file" @change="handleImgChange" />
+	<input type="checkbox" v-model="isColour">
+	<button type="submit" @click="submitImgToConverter">Submit to Preview</button>
+	<pre v-html="asciiArtHtml"></pre>
 </template>
 
 <script lang="ts" setup>
+import { ref } from 'vue';
+
+const uploadedImg = ref<File|null>(null);
+const isColour = ref(false);
+const asciiArtHtml = ref<string>("");
+
+const handleImgChange = (event: Event) => {
+	const files = (event.target as HTMLInputElement).files;
+	if (files && files.length > 0) {
+		uploadedImg.value = files[0];
+	}
+};
+
+const submitImgToConverter = async () => {
+	if (!uploadedImg.value) {
+		alert("Please firt upload an image.");
+	}
+
+	const formData = new FormData();
+	formData.append('image', uploadedImg.value);
+	formData.append('config', JSON.stringify({ is_color: isColour.value }))
+	
+	const response = await fetch('https://192.168.68.59:8444/convert-image', {
+		method: 'POST',
+		body: formData,
+	});
+
+	const asciiGrid = await response.json();
+	console.log(asciiGrid);
+
+	asciiArtHtml.value = asciiGrid.map((row: any[]) => 
+		row.map(pixel => {
+			if (isColour.value && pixel.rgb) {
+				const [r, g, b] = pixel.rgb;
+				return `<span style="color: rgb(${r},${g},${b})">${pixel.ch}</span>`;
+			} else {
+				return pixel.ch;
+			}
+		}).join('')
+	).join('<br>');
+}
 </script>
+
+<style>
+button {
+	color: black;
+}
+</style>
