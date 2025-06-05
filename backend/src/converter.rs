@@ -128,16 +128,21 @@ impl Converter {
         for y in 0..output_height {
             let mut row = Vec::with_capacity(config.output_width as usize);
             for x in 0..config.output_width {
-                let pixel_gray = img_gray.get_pixel(x, y);
-                let intensity = pixel_gray[0];
-                let ascii_char = Self::intensity_to_char(intensity, &config.character_set);
-                let rgb = if config.is_color {
+                if config.is_color {
                     let pixel_rgb = img_rgb.as_ref().unwrap().get_pixel(x, y);
-                    Some(Self::adjust_color(pixel_rgb, config.brightness_factor, config.contrast_factor))
+                    let adjusted_rgb = Self::adjust_color(pixel_rgb, config.brightness_factor, config.contrast_factor);
+                    // Calculate intensity from adjusted RGB (using standard luminance formula)
+                    let intensity = (0.299 * adjusted_rgb[0] as f32
+                                + 0.587 * adjusted_rgb[1] as f32
+                                + 0.114 * adjusted_rgb[2] as f32) as u8;
+                    let ascii_char = Self::intensity_to_char(intensity, &config.character_set);
+                    row.push(AsciiPixel { ch: ascii_char, rgb: Some(adjusted_rgb) });
                 } else {
-                    None
-                };
-                row.push(AsciiPixel { ch: ascii_char, rgb });
+                    let pixel_gray = img_gray.get_pixel(x, y);
+                    let intensity = pixel_gray[0];
+                    let ascii_char = Self::intensity_to_char(intensity, &config.character_set);
+                    row.push(AsciiPixel { ch: ascii_char, rgb: None });
+                }
             }
             ascii_grid.push(row);
         }
