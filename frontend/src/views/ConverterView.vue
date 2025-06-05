@@ -1,9 +1,20 @@
 <template>
 	<h1>Convert Here</h1>
 	<input type="file" @change="handleImgChange" />
-	<input type="checkbox" v-model="isColour">
+
+	<br> <br>
+	<div class="settings">
+		<label for="colourCheck">Colour: </label>
+		<input type="checkbox" id="colourCheck" v-model="isColour">
+		<label for="fontSize">Zoom: </label>
+		<input type="range" id="fontSize" v-model.number="fontSize" min="2" max="30" step="1"/>
+		<span>{{ fontSize }}px</span>
+	</div> 
+	<br>
+
 	<button type="submit" @click="submitImgToConverter">Submit to Preview</button>
-	<pre v-html="asciiArtHtml"></pre>
+
+	<pre :style="{ fontSize: `${fontSize}px` }" class="asciiArt" v-html="asciiArtHtml"></pre>
 </template>
 
 <script lang="ts" setup>
@@ -11,6 +22,7 @@ import { ref } from 'vue';
 
 const uploadedImg = ref<File|null>(null);
 const isColour = ref(false);
+const fontSize = ref(10);
 const asciiArtHtml = ref<string>("");
 
 const handleImgChange = (event: Event) => {
@@ -22,14 +34,15 @@ const handleImgChange = (event: Event) => {
 
 const submitImgToConverter = async () => {
 	if (!uploadedImg.value) {
-		alert("Please firt upload an image.");
+		alert("Please first upload an image.");
 	}
 
 	const formData = new FormData();
 	formData.append('image', uploadedImg.value);
 	formData.append('config', JSON.stringify({ is_color: isColour.value }))
 	
-	const response = await fetch('https://192.168.68.59:8444/convert-image', {
+	//const response = await fetch('https://192.168.68.59:8444/convert-image', {
+	const response = await fetch('https://192.168.1.95:8444/convert-image', {
 		method: 'POST',
 		body: formData,
 	});
