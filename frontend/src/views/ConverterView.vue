@@ -78,4 +78,7 @@ const submitImgToConverter = async () => {
 button {
 	color: black;
 }
+input {
+	color: black;
+}
 </style>
