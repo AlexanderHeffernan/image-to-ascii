@@ -12,6 +12,8 @@
 		<label for="contrast">Contrast: </label>
 		<input type="range" id="contrast" v-model.number="contrast" min="0.1" max="3" step="0.1">
 		<span>{{ contrast }}</span>
+		<label for="width">Width (10-500):</label>
+		<input type="number" id="width" v-model.number="width" min="10" max="500">
 	</div> 
 	<br>
 
@@ -30,6 +32,7 @@ const uploadedImg = ref<File|null>(null);
 const isColour = ref(false);
 const brightness = ref(1);
 const contrast = ref(1);
+const width = ref(200);
 const fontSize = ref(10);
 const asciiArtHtml = ref<string>("");
 
@@ -47,7 +50,7 @@ const submitImgToConverter = async () => {
 
 	const formData = new FormData();
 	formData.append('image', uploadedImg.value);
-	formData.append('config', JSON.stringify({ brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value }))
+	formData.append('config', JSON.stringify({ output_width: width.value, brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value }))
 	
 	//const response = await fetch('https://192.168.68.59:8444/convert-image', {
 	const response = await fetch('https://192.168.1.95:8444/convert-image', {
