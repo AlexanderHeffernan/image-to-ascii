@@ -1,14 +1,17 @@
 use image::{GenericImageView, Rgb};
 use serde::Serialize;
 
+/// Main converter struct (namespace only)
 pub struct Converter;
 
+/// Represents a single ASCII pixel, with optional color.
 #[derive(Serialize)]
 pub struct AsciiPixel {
     pub ch: char,
     pub rgb: Option<[u8; 3]>, // None for no-color output
 }
 
+/// Configuration for ASCII conversion.
 #[derive(Debug, Clone)]
 pub struct ConverterConfig {
     pub character_set: Vec<char>,       // User-defined character set
@@ -20,6 +23,7 @@ pub struct ConverterConfig {
     pub aspect_ratio_correction: f32,   // Correction factor for aspect ratio (default 0.55 for ASCII art)
 }
 
+/// Errors that can occur during conversion.
 #[derive(Debug)]
 pub enum ConverterError {
     ImageError(image::ImageError),
@@ -50,7 +54,7 @@ impl Converter {
         '%', '&', 'o', '0', 'O', '8', 'B', '#', '▒', '█',
     ];
 
-    // Validate configuration
+    /// Validates the configuration for sensible values.
     fn validate_config(config: &ConverterConfig) -> Result<(), ConverterError> {
         if config.output_width == 0 {
             return Err(ConverterError::InvalidParameter("Output width must be greater than 0".into()));
@@ -64,7 +68,8 @@ impl Converter {
         Ok(())
     }
 
-    // Adjust RGB color for brightness and contrast
+    /// Adjusts an RGB color for brightness and contrast.
+    /// Brightness is applied first, then contrast.
     fn adjust_color(rgb: &Rgb<u8>, brightness: f32, contrast: f32) -> [u8; 3] {
         let [r, g, b] = [rgb[0] as f32, rgb[1] as f32, rgb[2] as f32];
         // Apply brightness first, then contrast
@@ -76,21 +81,47 @@ impl Converter {
         ]
     }
 
-    // Map pixel intensity to a character
+    /// Maps a grayscale intensity (0-255) to a character from the set.
     fn intensity_to_char(intensity: u8, chars: &[char]) -> char {
         let index = (intensity as usize * (chars.len() - 1)) / 255;
         chars[index]
     }
 
+    /// Builds the ASCII grid from a generic image buffer using a pixel getter closure.
+    /// The closure should return (intensity, Optional<rgb>) for each (x, y).
+    fn build_ascii_grid<F>(
+        output_width: u32,
+        output_height: u32,
+        character_set: &[char],
+        mut get_pixel: F,
+    ) -> Vec<Vec<AsciiPixel>>
+    where
+        F: FnMut(u32, u32) -> (u8, Option<[u8; 3]>),
+    {
+        let mut ascii_grid = Vec::with_capacity(output_height as usize);
+        for y in 0..output_height {
+            let mut row = Vec::with_capacity(output_width as usize);
+            for x in 0..output_width {
+                let (intensity, rgb) = get_pixel(x, y);
+                let ascii_char = Self::intensity_to_char(intensity, character_set);
+                row.push(AsciiPixel { ch: ascii_char, rgb });
+            }
+            ascii_grid.push(row);
+        }
+        ascii_grid
+    }
+    
+
+    /// Converts an image (as bytes) to a 2D ASCII grid.
+    /// Returns a grid of AsciiPixel structs.
     pub fn convert_from_bytes(
         image_bytes: &[u8], 
         config: ConverterConfig
     ) -> Result<Vec<Vec<AsciiPixel>>, ConverterError> {
         Self::validate_config(&config)?;
-        println!("Brightness: {}, Contrast: {}, Color: {}", 
-                 config.brightness_factor, config.contrast_factor, config.is_color);
-        // Load and process image
-        let img = image::load_from_memory(image_bytes)?;
+        
+        // Load image from bytes
+        let mut img = image::load_from_memory(image_bytes)?;
         let (width, height) = img.dimensions();
 
         // Calculate output height if not specified
@@ -102,50 +133,42 @@ impl Converter {
             return Err(ConverterError::InvalidParameter("Calculated output height is 0".into()));
         }
 
-        // Resize grayscale image for intensity
-        let img_gray = img.to_luma8();
-        let img_gray = image::imageops::resize(
-            &img_gray,
-            config.output_width,
-            output_height,
-            image::imageops::FilterType::Nearest,
-        );
-
-        // Resize RGB image only if color mode is enabled
-        let img_rgb = if config.is_color {
-            Some(image::imageops::resize(
-                &img.to_rgb8(),
+        // Branch for color or grayscale processing, but use the same grid builder
+        if config.is_color {
+            let img_rgb = image::imageops::resize(
+                &img.to_rgb8(), 
+                config.output_width, 
+                output_height, 
+                image::imageops::FilterType::Lanczos3
+            );
+            Ok(Self::build_ascii_grid(
+                config.output_width,
+                output_height,
+                &config.character_set,
+                |x, y| {
+                    let pixel = img_rgb.get_pixel(x, y);
+                    let adjusted_rgb = Self::adjust_color(pixel, config.brightness_factor, config.contrast_factor);
+                    let intensity = (0.299 * adjusted_rgb[0] as f32 + 0.587 * adjusted_rgb[1] as f32 + 0.114 * adjusted_rgb[2] as f32) as u8;
+                    (intensity, Some(adjusted_rgb))
+                },
+            ))
+        } else {
+            let img_gray = image::imageops::resize(
+                &img.to_luma8(),
                 config.output_width,
                 output_height,
                 image::imageops::FilterType::Nearest,
+            );
+            Ok(Self::build_ascii_grid(
+                config.output_width,
+                output_height,
+                &config.character_set,
+                |x, y| {
+                    let pixel = img_gray.get_pixel(x, y);
+                    let intensity = pixel[0]; // Luma pixel intensity
+                    (intensity, None) // No color for no-color output
+                },
             ))
-        } else {
-            None
-        };
-
-        // Convert to ASCII
-        let mut ascii_grid = Vec::with_capacity(output_height as usize);
-        for y in 0..output_height {
-            let mut row = Vec::with_capacity(config.output_width as usize);
-            for x in 0..config.output_width {
-                if config.is_color {
-                    let pixel_rgb = img_rgb.as_ref().unwrap().get_pixel(x, y);
-                    let adjusted_rgb = Self::adjust_color(pixel_rgb, config.brightness_factor, config.contrast_factor);
-                    // Calculate intensity from adjusted RGB (using standard luminance formula)
-                    let intensity = (0.299 * adjusted_rgb[0] as f32
-                                + 0.587 * adjusted_rgb[1] as f32
-                                + 0.114 * adjusted_rgb[2] as f32) as u8;
-                    let ascii_char = Self::intensity_to_char(intensity, &config.character_set);
-                    row.push(AsciiPixel { ch: ascii_char, rgb: Some(adjusted_rgb) });
-                } else {
-                    let pixel_gray = img_gray.get_pixel(x, y);
-                    let intensity = pixel_gray[0];
-                    let ascii_char = Self::intensity_to_char(intensity, &config.character_set);
-                    row.push(AsciiPixel { ch: ascii_char, rgb: None });
-                }
-            }
-            ascii_grid.push(row);
         }
-        Ok(ascii_grid)
     }
 }
