@@ -1,12 +1,13 @@
 use serde::{Serialize, Deserialize};
 
 // ===== Default Value Functions =====
-fn default_charset()                -> Vec<char> { vec![' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'] }
-fn default_output_width()           -> u32       { 200 }
-fn default_brightness()             -> f32       { 1.0 }
-fn default_contrast()               -> f32       { 1.0 }
-fn default_is_color()               -> bool      { false }
-fn default_aspect_ratio_correction()-> f32       { 0.55 }
+fn default_charset()                -> Vec<char>    { vec![' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'] }
+fn default_output_width()           -> u32          { 200 }
+fn default_output_height()          -> Option<u32>  { None }
+fn default_brightness()             -> f32          { 1.0 }
+fn default_contrast()               -> f32          { 1.0 }
+fn default_is_color()               -> bool         { false }
+fn default_aspect_ratio_correction()-> f32          { 0.55 }
 
 // ===== Configuration Struct =====
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -20,7 +21,7 @@ pub struct ConverterConfig {
     pub output_width: u32,
 
     /// Optional height of the output (in characters). If `None`, calculated from aspect ratio.
-    #[serde(default)]
+    #[serde(default = "default_output_height")]
     pub output_height: Option<u32>,
 
     /// Brightness adjustment factor (1.0 = no change).
@@ -50,13 +51,13 @@ mod tests {
     fn test_defaults() {
         let json = json!({ });
         let config: ConverterConfig = serde_json::from_value(json).unwrap();
-        assert_eq!(config.character_set, vec![' ', '.', ':', '-', '=', '+', '*', '#', '%', '@']);
-        assert_eq!(config.output_width, 200);
-        assert_eq!(config.output_height, None);
-        assert_eq!(config.brightness_factor, 1.0);
-        assert_eq!(config.contrast_factor, 1.0);
-        assert_eq!(config.is_color, false);
-        assert_eq!(config.aspect_ratio_correction, 0.55);
+        assert_eq!(config.character_set, default_charset());
+        assert_eq!(config.output_width, default_output_width());
+        assert_eq!(config.output_height, default_output_height());
+        assert_eq!(config.brightness_factor, default_brightness());
+        assert_eq!(config.contrast_factor, default_contrast());
+        assert_eq!(config.is_color, default_is_color());
+        assert_eq!(config.aspect_ratio_correction, default_aspect_ratio_correction());
     }
 
     #[test]
@@ -66,11 +67,16 @@ mod tests {
             "is_color": true
         });
         let config: ConverterConfig = serde_json::from_value(json).unwrap();
+        // Check that partial deserialization is correct
         assert_eq!(config.output_width, 80);
         assert_eq!(config.is_color, true);
+
         // Check that defaults are still set for other fields
-        assert_eq!(config.character_set, vec![' ', '.', ':', '-', '=', '+', '*', '#', '%', '@']);
-        assert_eq!(config.brightness_factor, 1.0);
+        assert_eq!(config.character_set, default_charset());
+        assert_eq!(config.output_height, default_output_height());
+        assert_eq!(config.brightness_factor, default_brightness());
+        assert_eq!(config.contrast_factor, default_contrast());
+        assert_eq!(config.aspect_ratio_correction, default_aspect_ratio_correction());
     }
 
     #[test]
