@@ -14,9 +14,9 @@
 		<span>{{ contrast }}</span>
 		<br>
 		<label for="width">Width (10-500):</label>
-		<input type="number" id="width" v-model.number="width" min="10" max="500">
+		<input type="number" id="width" v-model.number="width" min="10" max="500" @change="adjustToAspectRatio(true)">
 		<label for="height">Height (10-500) *not working:</label>
-		<input type="number" id="height" v-model.number="height" min="10" max="500">
+		<input type="number" id="height" v-model.number="height" min="10" max="500" @change="adjustToAspectRatio(false)">
 	</div> 
 	<br>
 
@@ -37,7 +37,6 @@ const brightness = ref(1);
 const contrast = ref(1);
 const width = ref(200);
 const height = ref(100);
-const isLandscape = ref(true);
 const aspectRatio = ref(0);
 const aspectLock = ref(true);
 const fontSize = ref(10);
@@ -45,6 +44,7 @@ const asciiArtHtml = ref<string>("");
 
 const handleImgChange = (event: Event) => {
 	const files = (event.target as HTMLInputElement).files;
+	let isLandscape = true;
 	if (files && files.length > 0) {
 		uploadedImg.value = files[0];
 
@@ -53,16 +53,34 @@ const handleImgChange = (event: Event) => {
 		const objectUrl = URL.createObjectURL(files[0]);
 		img.src = objectUrl;
 		img.onload = () => {
-			aspectRatio.value = img.naturalWidth/img.naturalHeight;
-			isLandscape.value = img.naturalWidth >= img.naturalHeight
+			console.log(img.naturalWidth, img.naturalHeight, img.naturalWidth/img.naturalHeight);
+			aspectRatio.value = img.naturalWidth / img.naturalHeight;
+			isLandscape = img.naturalWidth >= img.naturalHeight
 			console.log(`Image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
 			URL.revokeObjectURL(objectUrl);
+
+			// Reset size values and adjust to aspect ratio
+			width.value = 200;
+			height.value = 100;
+			adjustToAspectRatio(isLandscape)
 		};
 			img.onerror = () => {
 			URL.revokeObjectURL(objectUrl);
 		};
 	}
 };
+
+const adjustToAspectRatio = (widthChange: boolean) => {
+	if (!aspectLock.value) { return; }
+
+	if (widthChange) {
+		console.log(width.value, aspectRatio.value, width.value/aspectRatio.value);
+		height.value = Math.round(width.value / aspectRatio.value);
+	}
+	else {
+		width.value = Math.round(height.value * aspectRatio.value);
+	}
+}
 
 const submitImgToConverter = async () => {
 	if (!uploadedImg.value) {
