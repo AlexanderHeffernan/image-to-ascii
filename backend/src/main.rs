@@ -6,6 +6,9 @@ use futures_util::StreamExt as _;
 use serde::Deserialize;
 use bytes::BytesMut;
 
+// Import the types from the converter module
+use converter::{Converter, ConverterConfig};
+
 /// Struct for deserialising incoming config JSON.
 /// All fields are optional to allow for defaults.
 #[derive(Deserialize)]

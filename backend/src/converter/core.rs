@@ -1,51 +1,8 @@
 use image::{GenericImageView, Rgb};
-use serde::Serialize;
+use crate::converter::{ascii_pixel::AsciiPixel, config::ConverterConfig, error::ConverterError};
 
 /// Main converter struct (namespace only)
 pub struct Converter;
-
-/// Represents a single ASCII pixel, with optional color.
-#[derive(Serialize)]
-pub struct AsciiPixel {
-    pub ch: char,
-    pub rgb: Option<[u8; 3]>, // None for no-color output
-}
-
-/// Configuration for ASCII conversion.
-#[derive(Debug, Clone)]
-pub struct ConverterConfig {
-    pub character_set: Vec<char>,       // User-defined character set
-    pub output_width: u32,              // Output width in characters
-    pub output_height: Option<u32>,     // Optional output height; if None, computed from aspect ratio
-    pub brightness_factor: f32,         // Brightness adjustment (e.g., 1.0 = no change)
-    pub contrast_factor: f32,           // Contrast adjustment (e.g., 1.0 = no change)
-    pub is_color: bool,                 // Color or no-color output
-    pub aspect_ratio_correction: f32,   // Correction factor for aspect ratio (default 0.55 for ASCII art)
-}
-
-/// Errors that can occur during conversion.
-#[derive(Debug)]
-pub enum ConverterError {
-    ImageError(image::ImageError),
-    InvalidParameter(String),
-}
-
-impl From<image::ImageError> for ConverterError {
-    fn from(err: image::ImageError) -> Self {
-        ConverterError::ImageError(err)
-    }
-}
-
-impl std::fmt::Display for ConverterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            ConverterError::ImageError(err) => write!(f, "Image error: {}", err),
-            ConverterError::InvalidParameter(msg) => write!(f, "Invalid parameter: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ConverterError {}
 
 impl Converter {
     // Default character set (dark to light)
