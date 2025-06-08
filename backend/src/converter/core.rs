@@ -5,12 +5,6 @@ use crate::converter::{ascii_pixel::AsciiPixel, config::ConverterConfig, error::
 pub struct Converter;
 
 impl Converter {
-    // Default character set (dark to light)
-    pub const DEFAULT_CHARS: &'static [char] = &[
-        ' ', '.', ':', ',', '-', '=', '+', '*', '@', '#',
-        '%', '&', 'o', '0', 'O', '8', 'B', '#', '▒', '█',
-    ];
-
     /// Validates the configuration for sensible values.
     fn validate_config(config: &ConverterConfig) -> Result<(), ConverterError> {
         if config.output_width == 0 {

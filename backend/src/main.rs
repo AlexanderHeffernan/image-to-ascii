@@ -9,19 +9,6 @@ use bytes::BytesMut;
 // Import the types from the converter module
 use converter::{Converter, ConverterConfig};
 
-/// Struct for deserialising incoming config JSON.
-/// All fields are optional to allow for defaults.
-#[derive(Deserialize)]
-struct ConverterConfigInput {
-    character_set: Option<Vec<char>>,
-    output_width: Option<u32>,
-    output_height: Option<u32>,
-    brightness_factor: Option<f32>,
-    contrast_factor: Option<f32>,
-    is_color: Option<bool>,
-    aspect_ratio_correction: Option<f32>,
-}
-
 /// Parses the multipart payload, extracting the image and config JSON (if present).
 async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<BytesMut>), rusty_api::HttpResponse> {
     let mut image_bytes = BytesMut::new();
@@ -75,30 +62,11 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
 
     // Parse config JSON or use defaults
     let config: converter::ConverterConfig = match config_json {
-        Some(json_bytes) => {
-            let input: ConverterConfigInput = match serde_json::from_slice(&json_bytes) {
-                Ok(input) => input,
-                Err(e) => return rusty_api::HttpResponse::BadRequest().body(format!("Invalid config JSON: {}", e)),
-            };
-            converter::ConverterConfig {
-                character_set: input.character_set.unwrap_or_else(|| converter::Converter::DEFAULT_CHARS.to_vec()),
-                output_width: input.output_width.unwrap_or(200),
-                output_height: input.output_height,
-                brightness_factor: input.brightness_factor.unwrap_or(1.5),
-                contrast_factor: input.contrast_factor.unwrap_or(1.0),
-                is_color: input.is_color.unwrap_or(false),
-                aspect_ratio_correction: input.aspect_ratio_correction.unwrap_or(0.55),
-            }
-        }
-        None => converter::ConverterConfig {
-            character_set: converter::Converter::DEFAULT_CHARS.to_vec(),
-            output_width: 200,
-            output_height: None,
-            brightness_factor: 1.0,
-            contrast_factor: 1.0,
-            is_color: false,
-            aspect_ratio_correction: 0.55,
-        }
+        Some(json_bytes) => match serde_json::from_slice(&json_bytes) {
+            Ok(cfg) => cfg,
+            Err(e) => return rusty_api::HttpResponse::BadRequest().body(format!("Invalid config JSON: {}", e)),
+        },
+        None => return rusty_api::HttpResponse::BadRequest().body("Missing config JSON"),
     };
 
     // Convert image and return ASCII grid as JSON
