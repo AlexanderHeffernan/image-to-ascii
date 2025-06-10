@@ -19,6 +19,11 @@
 		<input type="number" id="height" v-model.number="height" min="10" max="500" @change="adjustToAspectRatio(false)">
 		<label for="aspectLock">Aspect Lock:</label>
 		<input type="checkbox" id="aspectLock" v-model="aspectLock">
+		<br>
+		<label for="aspectCorrection">Aspect Ratio Correction:</label>
+		<input type="range" id="aspectCorrection" v-model.number="aspectRatioCorrection" min="0.1" max="2" step="0.01" @change="adjustToAspectRatio(true)">
+		<span>{{ aspectRatioCorrection }}</span>
+		<span style="color: red">* aspect ratio correction accounts for characters being more tall then wide.</span>
 	</div> 
 	<br>
 
@@ -89,10 +94,10 @@ const submitImgToConverter = async () => {
 
 	const formData = new FormData();
 	formData.append('image', uploadedImg.value);
-	formData.append('config', JSON.stringify({ output_width: width.value, output_height: height.value, brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value }))
+	formData.append('config', JSON.stringify({ output_width: width.value, output_height: height.value, brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value, aspect_ratio_correction: aspectRatioCorrection.value }))
 	
-	const response = await fetch('https://192.168.68.59:8444/convert-image', {
-	//const response = await fetch('https://192.168.1.95:8444/convert-image', {
+	//const response = await fetch('https://192.168.68.59:8444/convert-image', {
+	const response = await fetch('https://192.168.1.95:8444/convert-image', {
 		method: 'POST',
 		body: formData,
 	});
