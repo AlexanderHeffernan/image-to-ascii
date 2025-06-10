@@ -15,8 +15,10 @@
 		<br>
 		<label for="width">Width (10-500):</label>
 		<input type="number" id="width" v-model.number="width" min="10" max="500" @change="adjustToAspectRatio(true)">
-		<label for="height">Height (10-500) *not working:</label>
+		<label for="height">Height (10-500):</label>
 		<input type="number" id="height" v-model.number="height" min="10" max="500" @change="adjustToAspectRatio(false)">
+		<label for="aspectLock">Aspect Lock:</label>
+		<input type="checkbox" id="aspectLock" v-model="aspectLock">
 	</div> 
 	<br>
 
@@ -38,6 +40,7 @@ const contrast = ref(1);
 const width = ref(200);
 const height = ref(100);
 const aspectRatio = ref(0);
+const aspectRatioCorrection = ref(0.55);
 const aspectLock = ref(true);
 const fontSize = ref(10);
 const asciiArtHtml = ref<string>("");
@@ -53,10 +56,8 @@ const handleImgChange = (event: Event) => {
 		const objectUrl = URL.createObjectURL(files[0]);
 		img.src = objectUrl;
 		img.onload = () => {
-			console.log(img.naturalWidth, img.naturalHeight, img.naturalWidth/img.naturalHeight);
 			aspectRatio.value = img.naturalWidth / img.naturalHeight;
 			isLandscape = img.naturalWidth >= img.naturalHeight
-			console.log(`Image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
 			URL.revokeObjectURL(objectUrl);
 
 			// Reset size values and adjust to aspect ratio
@@ -74,11 +75,10 @@ const adjustToAspectRatio = (widthChange: boolean) => {
 	if (!aspectLock.value) { return; }
 
 	if (widthChange) {
-		console.log(width.value, aspectRatio.value, width.value/aspectRatio.value);
-		height.value = Math.round(width.value / aspectRatio.value);
+		height.value = Math.round((width.value / aspectRatio.value) * aspectRatioCorrection.value);
 	}
 	else {
-		width.value = Math.round(height.value * aspectRatio.value);
+		width.value = Math.round((height.value * aspectRatio.value) / aspectRatioCorrection.value);
 	}
 }
 
@@ -89,7 +89,7 @@ const submitImgToConverter = async () => {
 
 	const formData = new FormData();
 	formData.append('image', uploadedImg.value);
-	formData.append('config', JSON.stringify({ output_width: width.value, brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value }))
+	formData.append('config', JSON.stringify({ output_width: width.value, output_height: height.value, brightness_factor: brightness.value, contrast_factor: contrast.value, is_color: isColour.value }))
 	
 	const response = await fetch('https://192.168.68.59:8444/convert-image', {
 	//const response = await fetch('https://192.168.1.95:8444/convert-image', {
