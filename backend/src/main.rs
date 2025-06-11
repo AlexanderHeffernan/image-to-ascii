@@ -1,17 +1,16 @@
 mod converter;
+mod request_logger;
 
 use rusty_api;
 use actix_multipart::Multipart;
 use futures_util::StreamExt as _;
 use serde::Deserialize;
 use bytes::BytesMut;
-use simplelog::*;
-use std::fs::{File, OpenOptions};
-use log::{info, error};
 use chrono::Utc;
 
 // Import the types from the converter module
 use converter::{Converter, ConverterConfig};
+use request_logger::RequestLogger;
 
 /// Parses the multipart payload, extracting the image and config JSON (if present).
 async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<BytesMut>), rusty_api::HttpResponse> {
@@ -58,26 +57,16 @@ async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<Byt
 /// Main route handler for image-to-ASCII conversion.
 /// Accepts multipart form-data with "image" and optional "config" fields.
 async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse {
-    struct RequestLogger {
-        request_id: i64,
-    }
-
-    impl Drop for RequestLogger {
-        fn drop(&mut self) {
-            info!("------------------- [Request {}] End -------------------", self.request_id);
-        }
-    }
-
     let request_id = Utc::now().timestamp_millis();
-    let _guard = RequestLogger { request_id };
-    info!("------------------- [Request {}] -------------------", request_id);
-    info!("[{}] Received request to /convert-image", request_id);
+    let logger = RequestLogger::new(request_id);
+
+    logger.info("Received request to /convert-image");
 
     // Parse multipart payload
     let (image_bytes, config_json) = match parse_multipart(payload).await {
         Ok(res) => res,
         Err(resp) => {
-            error!("[{}] Failed to parse multipart payload", request_id);
+            logger.error("Failed to parse multipart payload");
             return resp;
         },
     };
@@ -88,18 +77,18 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
             Ok(cfg) => {
                 // Log the config details as JSON
                 match serde_json::to_string(&cfg) {
-                    Ok(cfg_str) => info!("[{}] Config received: {}", request_id, cfg_str),
-                    Err(e) => error!("[{}] Failed to serialize config for logging: {}", request_id, e),
+                    Ok(cfg_str) => logger.info(format!("Config received: {}", cfg_str)),
+                    Err(e) => logger.error(format!("Failed to serialize config for logging: {}", e)),
                 }
                 cfg
             },
             Err(e) => {
-                error!("[{}] Invalid config JSON: {}", request_id, e);
+                logger.error(format!("Invalid config JSON: {}", e));
                 return rusty_api::HttpResponse::BadRequest().body(format!("Invalid config JSON: {}", e));
             },
         },
         None => {
-            error!("[{}] Missing config JSON", request_id);
+            logger.error("Missing config JSON");
             return rusty_api::HttpResponse::BadRequest().body("Missing config JSON");
         },
     };
@@ -107,20 +96,20 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
     // Convert image and return ASCII grid as JSON
     match converter::Converter::convert_from_bytes(&image_bytes, config) {
         Ok(ascii_grid) => {
-            info!("[{}] Image converted successfully", request_id);
+            logger.info("Image converted successfully");
             match serde_json::to_string(&ascii_grid) {
                 Ok(json) => rusty_api::HttpResponse::Ok()
                     .content_type("application/json")
                     .body(json),
                 Err(e) => {
-                    error!("[{}] Serialization error: {}", request_id, e);
+                    logger.error(format!("Serialization error: {}", e));
                     return rusty_api::HttpResponse::InternalServerError()
                         .body(format!("Serialization error: {}", e));
                 },
             }
         }
         Err(e) => {
-            error!("[{}] Conversion error: {}", request_id, e);
+            logger.error(format!("Conversion error: {}", e));
             return rusty_api::HttpResponse::InternalServerError()
                 .body(format!("Conversion error: {}", e));
         },
@@ -129,19 +118,6 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
 
 /// Entrypoint: sets up API routes, TLS, CORS, and starts the server.
 fn main() {
-    // Initialize logging
-    CombinedLogger::init(vec![
-        WriteLogger::new(
-            LevelFilter::Info,
-            Config::default(),
-            OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("backend.log")
-                .unwrap(),
-        ),
-    ]).unwrap();
-
     let routes = rusty_api::Routes::new()
         .add_route(rusty_api::Method::POST, "/convert-image", convert_image_route);
 
