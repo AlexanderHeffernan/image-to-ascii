@@ -72,7 +72,7 @@ impl Converter {
         Self::validate_config(&config)?;
         
         // Load image from bytes
-        let mut img = image::load_from_memory(image_bytes)?;
+        let img = image::load_from_memory(image_bytes)?;
         let (width, height) = img.dimensions();
 
         // Calculate output height if not specified
