@@ -65,3 +65,15 @@ impl Drop for RequestLogger {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn logger_can_be_created_and_logs_info() {
+        let logger = RequestLogger::new(12345);
+        logger.info("Test info message");
+        logger.error("Test error message");
+        // No assertions: just ensure no panic and log file is written.
+    }
+}
