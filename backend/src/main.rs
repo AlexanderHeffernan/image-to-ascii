@@ -72,7 +72,7 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
     };
 
     // Parse config JSON or use defaults
-    let config: converter::ConverterConfig = match config_json {
+    let config: ConverterConfig = match config_json {
         Some(json_bytes) => match serde_json::from_slice(&json_bytes) {
             Ok(cfg) => {
                 // Log the config details as JSON
