@@ -2,8 +2,6 @@ use simplelog::*;
 use std::fs::OpenOptions;
 use log::{info, error};
 use std::sync::OnceLock;
-use chrono::{Local, TimeZone};
-use chrono_tz::Pacific::Auckland;
 
 /// Ensures the logger is only initialized once for the entire application lifetime.
 static LOGGER_INIT: OnceLock<()> = OnceLock::new();
