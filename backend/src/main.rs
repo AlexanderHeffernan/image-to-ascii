@@ -4,7 +4,6 @@ mod request_logger;
 use rusty_api;
 use actix_multipart::Multipart;
 use futures_util::StreamExt as _;
-use serde::Deserialize;
 use bytes::BytesMut;
 use chrono::Utc;
 
@@ -94,7 +93,7 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
     };
 
     // Convert image and return ASCII grid as JSON
-    match converter::Converter::convert_from_bytes(&image_bytes, config) {
+    match Converter::convert_from_bytes(&image_bytes, config) {
         Ok(ascii_grid) => {
             logger.info("Image converted successfully");
             match serde_json::to_string(&ascii_grid) {
