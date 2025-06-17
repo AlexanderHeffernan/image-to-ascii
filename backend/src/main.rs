@@ -55,7 +55,7 @@ async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<Byt
 
 /// Main route handler for image-to-ASCII conversion.
 /// Accepts multipart form-data with "image" and optional "config" fields.
-async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse {
+async fn convert_image_route(payload: Multipart) -> rusty_api::HttpResponse {
     let request_id = Utc::now().timestamp_millis();
     let logger = RequestLogger::new(request_id);
 
