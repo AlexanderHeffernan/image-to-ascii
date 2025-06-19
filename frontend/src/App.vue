@@ -1,7 +1,7 @@
 <template>
 	<nav>
 		<h1>PixCha</h1>
-		<div>
+		<div class="router-links">
 			<router-link class="router-link" to="/">Home</router-link>
 			<router-link class="router-link" to="/converter">Converter</router-link>
 		</div>
@@ -33,5 +33,10 @@ nav {
 
 .router-link {
 	padding-left: 10px;
+	text-decoration: none;
+}
+
+.router-link:hover {
+	text-decoration: underline;
 }
 </style>
