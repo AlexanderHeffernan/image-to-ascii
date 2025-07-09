@@ -4,7 +4,6 @@ mod request_logger;
 use rusty_api;
 use actix_multipart::Multipart;
 use futures_util::StreamExt as _;
-use serde::Deserialize;
 use bytes::BytesMut;
 use chrono::Utc;
 
@@ -56,7 +55,7 @@ async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<Byt
 
 /// Main route handler for image-to-ASCII conversion.
 /// Accepts multipart form-data with "image" and optional "config" fields.
-async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse {
+async fn convert_image_route(payload: Multipart) -> rusty_api::HttpResponse {
     let request_id = Utc::now().timestamp_millis();
     let logger = RequestLogger::new(request_id);
 
@@ -72,7 +71,7 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
     };
 
     // Parse config JSON or use defaults
-    let config: converter::ConverterConfig = match config_json {
+    let config: ConverterConfig = match config_json {
         Some(json_bytes) => match serde_json::from_slice(&json_bytes) {
             Ok(cfg) => {
                 // Log the config details as JSON
@@ -94,7 +93,7 @@ async fn convert_image_route(mut payload: Multipart) -> rusty_api::HttpResponse 
     };
 
     // Convert image and return ASCII grid as JSON
-    match converter::Converter::convert_from_bytes(&image_bytes, config) {
+    match Converter::convert_from_bytes(&image_bytes, config) {
         Ok(ascii_grid) => {
             logger.info("Image converted successfully");
             match serde_json::to_string(&ascii_grid) {

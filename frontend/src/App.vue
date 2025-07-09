@@ -1,7 +1,7 @@
 <template>
 	<nav>
 		<h1>PixCha</h1>
-		<div>
+		<div class="router-links">
 			<router-link class="router-link" to="/">Home</router-link>
 			<router-link class="router-link" to="/converter">Converter</router-link>
 		</div>
@@ -17,7 +17,7 @@
 }
 
 body {
-	background-color: black;
+	background-color: rgb(17, 17, 17);
 	padding-left: 100px;
 	padding-right: 100px;
 }
@@ -26,12 +26,18 @@ nav {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding-top: 30px;
-	padding-bottom: 30px;
+	padding-top: 15px;
+	padding-bottom: 15px;
+	margin-bottom: 30px;
 	border-bottom: 1px solid white;
 }
 
 .router-link {
 	padding-left: 10px;
+	text-decoration: none;
+}
+
+.router-link:hover {
+	text-decoration: underline;
 }
 </style>

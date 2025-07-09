@@ -111,6 +111,7 @@ const adjustToAspectRatio = (widthChange: boolean) => {
 const submitImgToConverter = async () => {
 	if (!uploadedImg.value) {
 		alert("Please first upload an image.");
+		return;
 	}
 
 	// Simple implementation of multiple character sets
