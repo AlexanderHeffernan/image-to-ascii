@@ -6,49 +6,23 @@
 
 	<br> <br>
 	<!-- Container for conversion settings -->
-	<div class="settings">
-		<!-- Dropdown to select character set for ASCII art -->
-		<label for="charSet">Character Set: </label>
-		<select id="charSet" v-model="charSet">
-			<option value="standard">Standard</option>
-			<option value="simple">Simple</option>
-			<option value="complex">Complex</option>
-		</select>
-		<br>
-		<!-- Checkbox to enable/disable color in ASCII output -->
-		<label for="colourCheck">Colour: </label>
-		<input type="checkbox" id="colourCheck" v-model="isColour">
-		<!-- Slider to adjust brightness of the image -->
-		<label for="brightness">Brightness: </label>
-		<input type="range" id="brightness" v-model.number="brightness" min="0.1" max="3" step="0.1">
-		<span>{{ brightness }}</span>
-		<!-- Slider to adjust contrast of the image -->
-		<label for="contrast">Contrast: </label>
-		<input type="range" id="contrast" v-model.number="contrast" min="0.1" max="3" step="0.1">
-		<span>{{ contrast }}</span>
-		<br>
-		<!-- Input for output width, triggers aspect ratio adjustment on change -->
-		<label for="width">Width (10-500):</label>
-		<input type="number" id="width" v-model.number="width" min="10" max="500" @change="adjustToAspectRatio(true)">
-		<!-- Input for output height, triggers aspect ratio adjustment on change -->
-		<label for="height">Height (10-500):</label>
-		<input type="number" id="height" v-model.number="height" min="10" max="500" @change="adjustToAspectRatio(false)">
-		<!-- Checkbox to lock/unlock aspect ratio -->
-		<label for="aspectLock">Aspect Lock:</label>
-		<input type="checkbox" id="aspectLock" v-model="aspectLock">
-		<br>
-		<!-- Slider to adjust aspect ratio correction for character dimensions -->
-		<label for="aspectCorrection">Aspect Ratio Correction:</label>
-		<input type="range" id="aspectCorrection" v-model.number="aspectRatioCorrection" min="0.1" max="2" step="0.01" @change="adjustToAspectRatio(true)">
-		<span>{{ aspectRatioCorrection }}</span>
-		<!-- Note explaining aspect ratio correction -->
-		<span style="color: red">* aspect ratio correction accounts for characters being more tall then wide.</span>
-	</div> 
+	<SettingsDrawer 
+		:width = "width"
+		:height = "height"
+		
+		@update:char-set="charSet = $event"
+		@update:width="value => handleSettingChange('width', value)"
+		@update:height="value => handleSettingChange('height', value)"
+		@update:aspect-lock="aspectLock = $event"
+		@update:is-colour="isColour = $event"
+		@update:brightness="brightness = $event"
+		@update:contrast="contrast = $event"
+		@update:aspect-ratio-correction="value => handleSettingChange('aspectRatioCorrection', value)"
+	/> 
 	<br>
 
 	<!-- Button to submit image and settings for conversion -->
 	<button type="submit" @click="submitImgToConverter">Submit to Preview</button>
-
 	<!-- Slider to adjust zoom (font size) of ASCII art display -->
 	<label for="fontSize">Zoom: </label>
 	<input type="range" id="fontSize" v-model.number="fontSize" min="2" max="30" step="1"/>
@@ -59,20 +33,22 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
+import SettingsDrawer from '@/components/SettingsDrawer.vue'
 
 // Reactive variables for various functionality
 const uploadedImg = ref<File|null>(null);
+const aspectRatio = ref(0);
+const fontSize = ref(10);
+const asciiArtHtml = ref<string>("");
+
 const charSet = ref("standard");
+const width = ref(200);
+const height = ref(100);
+const aspectLock = ref(true);
 const isColour = ref(false);
 const brightness = ref(1);
 const contrast = ref(1);
-const width = ref(200);
-const height = ref(100);
-const aspectRatio = ref(0);
 const aspectRatioCorrection = ref(0.55);
-const aspectLock = ref(true);
-const fontSize = ref(10);
-const asciiArtHtml = ref<string>("");
 
 // Handles image file selection and calculates aspect ratio of the selected image
 const handleImgChange = (event: Event) => {
@@ -102,6 +78,20 @@ const handleImgChange = (event: Event) => {
 		};
 	}
 };
+
+const handleSettingChange = (setting: string, value: number) => {
+	if (setting === 'height') {
+		height.value = value;
+		adjustToAspectRatio(false);
+	}
+	else if (setting === 'width') {
+		width.value = value;
+	}
+	else if (setting === 'aspectRatioCorrection') {
+		aspectRatioCorrection.value = value
+	}
+	adjustToAspectRatio(true)
+}
 
 // Adjusts width or height to maintain aspect ratio if aspectLock is enabled
 const adjustToAspectRatio = (widthChange: boolean) => {
@@ -157,7 +147,6 @@ const submitImgToConverter = async () => {
 
 	// Parse the ASCII grid from the server response
 	const asciiGrid = await response.json();
-	console.log(asciiGrid);
 
 	// Convert ASCII grid to HTML, applying color if enabled
 	asciiArtHtml.value = asciiGrid.map((row: any[]) => 
@@ -176,6 +165,11 @@ const submitImgToConverter = async () => {
 </script>
 
 <style>
+h1 {
+	padding-top: 15px;
+	padding-bottom: 15px;
+}
+
 /* Basic styling to ensure form elements have readable text color */
 button {
 	color: black;
