@@ -23,7 +23,7 @@ jobs:
     steps:
     - name: Run Tests
       run: cargo test --verbose
-      working-directory: ./backend
+      working-directory: backend
 
   build:
     name: Build
@@ -33,4 +33,4 @@ jobs:
     steps:
     - name: Build release
       run: cargo build --release --verbose
-      working-directory: ./backend
+      working-directory: backend
