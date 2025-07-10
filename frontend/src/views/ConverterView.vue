@@ -141,7 +141,7 @@ const submitImgToConverter = async () => {
 	
 	// Send POST request to conversion endpoint
 	//const response = await fetch('https://192.168.68.59:8444/convert-image', {
-	const response = await fetch('https://192.168.1.95:8444/convert-image', {
+	const response = await fetch('https://meerkat-flowing-blatantly.ngrok-free.app/convert-image', {
 		method: 'POST',
 		body: formData,
 	});
