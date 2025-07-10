@@ -1,12 +1,14 @@
 <template>
-	<nav>
-		<h1>PixCha</h1>
-		<div class="router-links">
-			<router-link class="router-link" to="/">Home</router-link>
-			<router-link class="router-link" to="/converter">Converter</router-link>
-		</div>
-	</nav>
-	<router-view/>
+	<div class="app-content">
+		<nav>
+			<h1 style="padding: 0px !important">PixCha</h1>
+			<div class="router-links">
+				<router-link class="router-link" to="/">Home</router-link>
+				<router-link class="router-link" to="/converter">Converter</router-link>
+			</div>
+		</nav>
+		<router-view/>
+	</div>
 </template>
 
 <style>
@@ -20,16 +22,19 @@ body {
 	background-color: rgb(17, 17, 17);
 	padding-left: 100px;
 	padding-right: 100px;
-}
+}	
 
 nav {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding-top: 15px;
-	padding-bottom: 15px;
-	margin-bottom: 30px;
+	padding-top: 30px;
+	padding-bottom: 30px;
 	border-bottom: 1px solid white;
+}
+
+.app-content {
+	height: 100vh;
 }
 
 .router-link {

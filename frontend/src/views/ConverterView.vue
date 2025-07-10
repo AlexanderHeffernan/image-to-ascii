@@ -1,34 +1,39 @@
 <template>
 	<!-- Main heading for the image-to-ASCII converter -->
 	<h1>Convert Here</h1>
-	<!-- File input to upload an image, triggers handleImgChange on file selection -->
-	<input style="color: white" type="file" @change="handleImgChange" />
 
-	<br> <br>
-	<!-- Container for conversion settings -->
-	<SettingsDrawer 
-		:width = "width"
-		:height = "height"
-		
-		@update:char-set="charSet = $event"
-		@update:width="value => handleSettingChange('width', value)"
-		@update:height="value => handleSettingChange('height', value)"
-		@update:aspect-lock="aspectLock = $event"
-		@update:is-colour="isColour = $event"
-		@update:brightness="brightness = $event"
-		@update:contrast="contrast = $event"
-		@update:aspect-ratio-correction="value => handleSettingChange('aspectRatioCorrection', value)"
-	/> 
-	<br>
+	<div class="convertion-content">
+		<div class="settings-drawer">
+			<!-- Container for conversion settings -->
+			<SettingsDrawer 
+				:width = "width"
+				:height = "height"
+				
+				@update:char-set="charSet = $event"
+				@update:width="value => handleSettingChange('width', value)"
+				@update:height="value => handleSettingChange('height', value)"
+				@update:aspect-lock="aspectLock = $event"
+				@update:is-colour="isColour = $event"
+				@update:brightness="brightness = $event"
+				@update:contrast="contrast = $event"
+				@update:aspect-ratio-correction="value => handleSettingChange('aspectRatioCorrection', value)"
+			/> 
+		</div>
 
-	<!-- Button to submit image and settings for conversion -->
-	<button type="submit" @click="submitImgToConverter">Submit to Preview</button>
-	<!-- Slider to adjust zoom (font size) of ASCII art display -->
-	<label for="fontSize">Zoom: </label>
-	<input type="range" id="fontSize" v-model.number="fontSize" min="2" max="30" step="1"/>
-	<span>{{ fontSize }}px</span>
-	<!-- Preformatted text area to display the ASCII art, with dynamic font size -->
-	<pre :style="{ fontSize: `${fontSize}px` }" class="asciiArt" v-html="asciiArtHtml"></pre>
+		<div class="image-view">
+			<!-- File input to upload an image, triggers handleImgChange on file selection -->
+			<input style="color: white" type="file" @change="handleImgChange" />
+
+			<!-- Button to submit image and settings for conversion -->
+			<button type="submit" @click="submitImgToConverter">Convert</button>
+			<!-- Slider to adjust zoom (font size) of ASCII art display -->
+			<label for="fontSize">Zoom: </label>
+			<input type="range" id="fontSize" v-model.number="fontSize" min="2" max="30" step="1"/>
+			<span>{{ fontSize }}px</span>
+			<!-- Preformatted text area to display the ASCII art, with dynamic font size -->
+			<pre :style="{ fontSize: `${fontSize}px` }" class="asciiArt" v-html="asciiArtHtml"></pre>
+		</div>
+	</div>
 </template>
 
 <script lang="ts" setup>
@@ -140,8 +145,8 @@ const submitImgToConverter = async () => {
 	}));
 	
 	// Send POST request to conversion endpoint
-	//const response = await fetch('https://192.168.68.59:8444/convert-image', {
-	const response = await fetch('https://192.168.1.95:8444/convert-image', {
+	const response = await fetch('https://192.168.68.58:8444/convert-image', {
+	//const response = await fetch('https://192.168.1.95:8444/convert-image', {
 		method: 'POST',
 		body: formData,
 	});
@@ -167,8 +172,26 @@ const submitImgToConverter = async () => {
 
 <style>
 h1 {
-	padding-top: 15px;
-	padding-bottom: 15px;
+	padding-bottom: 20px;
+	padding-top: 20px
+}
+
+.convertion-content {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+
+.settings-drawer {
+	width: 200px;
+	height: 100%;
+	text-align: center;
+}
+
+.image-view {
+	width: calc(100% - 200px);
+	height: 100%;
+	text-align: center;
 }
 
 /* Basic styling to ensure form elements have readable text color */
