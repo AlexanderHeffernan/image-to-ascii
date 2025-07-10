@@ -1,35 +1,59 @@
 #!/bin/bash
+
+# Exit on error
 set -e
 
-echo "Starting uninstallation of Rust image-to-ASCII backend..."
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
 
-# Set install directory (same as in install script)
+echo -e "${GREEN}Starting image-to-ASCII backend uninstallation...${NC}"
+
+# Define install directory and service
 INSTALL_DIR="$HOME/image-to-ASCII-backend"
-SERVICE_FILE="/etc/systemd/system/image-to-ascii-backend.service"
+SERVICE_NAME="image-to-ascii-backend.service"
+SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME"
 
-# Stop and disable the systemd service
-if sudo systemctl is-active image-to-ascii-backend.service >/dev/null 2>&1; then
-    echo "Stopping image-to-ascii-backend service..."
-    sudo systemctl stop image-to-ascii-backend.service
+# Stop and disable the service
+if systemctl is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo "Stopping $SERVICE_NAME..."
+    sudo systemctl stop "$SERVICE_NAME"
 fi
 
-if sudo systemctl is-enabled image-to-ascii-backend.service >/dev/null 2>&1; then
-    echo "Disabling image-to-ascii-backend service..."
-    sudo systemctl disable image-to-ascii-backend.service
+if systemctl is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo "Disabling $SERVICE_NAME..."
+    sudo systemctl disable "$SERVICE_NAME"
 fi
 
-# Remove the systemd service file
+# Remove the service file
 if [ -f "$SERVICE_FILE" ]; then
-    echo "Removing systemd service file..."
-    sudo rm -f "$SERVICE_FILE"
-    sudo systemctl daemon-reload
+    echo "Removing service file $SERVICE_FILE..."
+    sudo rm "$SERVICE_FILE"
 fi
 
-# Remove the installation directory and all its contents
+# Reload systemd
+echo "Reloading systemd daemon..."
+sudo systemctl daemon-reload
+
+# Remove the install directory
 if [ -d "$INSTALL_DIR" ]; then
-    echo "Removing installation directory: $INSTALL_DIR"
+    echo "Removing installation directory $INSTALL_DIR..."
     rm -rf "$INSTALL_DIR"
+else
+    echo "No installation directory found at $INSTALL_DIR."
 fi
 
-echo "Rust image-to-ASCII backend has been successfully uninstalled."
-echo "Note: This script does not remove curl or openssl as they may be used by other applications."
+# Verify removal
+if systemctl list-units --all | grep -q "$SERVICE_NAME"; then
+    echo -e "${RED}Warning: $SERVICE_NAME still appears in systemd. Check 'systemctl list-units --all'.${NC}"
+else
+    echo -e "${GREEN}Service $SERVICE_NAME successfully removed from systemd.${NC}"
+fi
+
+if ps aux | grep -E "image-to-ASCII" | grep -v grep >/dev/null 2>&1; then
+    echo -e "${RED}Warning: image-to-ASCII process is still running. Killing it...${NC}"
+    pkill -f "image-to-ASCII" || echo "Failed to kill process. Please check manually."
+fi
+
+echo -e "${GREEN}Uninstallation complete!${NC}"
