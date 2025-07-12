@@ -1,13 +1,14 @@
 use crate::converter::ascii_pixel::AsciiPixel;
 use std::fmt;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RleEntry {
     pub count: u32,
     pub pixel: AsciiPixel,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompressedGrid {
     pub width: u32,
     pub height: u32,

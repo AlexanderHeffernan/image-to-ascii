@@ -3,6 +3,7 @@ mod tests {
     use super::*;
     use crate::converter::ascii_pixel::AsciiPixel;
     use crate::compressor::rle;
+    use crate::compressor::gzip;
     use crate::compressor::compress_ascii_grid;
     use crate::compressor::decompress_ascii_grid;
 
@@ -271,7 +272,213 @@ mod tests {
         }
     }
 
-    // Additional tests using helper functions...
+    // Gzip Tests
+    mod gzip_tests {
+        use super::*;
+
+        #[test]
+        fn test_gzip_simple_compression() {
+            let test_data = b"Hello, World! This is a test string for gzip compression.";
+            let compressed = gzip::compress(test_data).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(test_data, decompressed.as_slice());
+        }
+
+        #[test]
+        fn test_gzip_empty_data() {
+            let empty_data = b"";
+            let compressed = gzip::compress(empty_data).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(empty_data, decompressed.as_slice());
+        }
+
+        #[test]
+        fn test_gzip_repetitive_data() {
+            // Test data with lots of repetition (should compress well)
+            let repetitive_data = "A".repeat(1000);
+            let compressed = gzip::compress(repetitive_data.as_bytes()).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(repetitive_data.as_bytes(), decompressed.as_slice());
+            
+            // Verify compression is effective
+            assert!(compressed.len() < repetitive_data.len() / 2, "Gzip should compress repetitive data significantly");
+        }
+
+        #[test]
+        fn test_gzip_random_data() {
+            // Test with pseudo-random data (should not compress well)
+            let random_data = "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()".repeat(20);
+            let compressed = gzip::compress(random_data.as_bytes()).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(random_data.as_bytes(), decompressed.as_slice());
+        }
+
+        #[test]
+        fn test_gzip_large_data() {
+            // Test with larger data set
+            let large_data = "This is a test string that will be repeated many times to create a large dataset for testing gzip compression performance and correctness. ".repeat(100);
+            let compressed = gzip::compress(large_data.as_bytes()).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(large_data.as_bytes(), decompressed.as_slice());
+        }
+
+        #[test]
+        fn test_gzip_ascii_art_pattern() {
+            // Test with ASCII art-like patterns
+            let ascii_art = "   ###   \n  #####  \n #######\n#########\n #######\n  #####  \n   ###   \n".repeat(10);
+            let compressed = gzip::compress(ascii_art.as_bytes()).expect("Gzip compression should succeed");
+            let decompressed = gzip::decompress(&compressed).expect("Gzip decompression should succeed");
+            
+            assert_eq!(ascii_art.as_bytes(), decompressed.as_slice());
+            
+            // ASCII art should compress reasonably well
+            assert!(compressed.len() < ascii_art.len(), "ASCII art should compress");
+        }
+
+        #[test]
+        fn test_gzip_compression_ratio() {
+            let test_data = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+            let compressed = gzip::compress(test_data.as_bytes()).expect("Gzip compression should succeed");
+            
+            let ratio = gzip::compression_ratio(test_data.as_bytes(), &compressed);
+            assert!(ratio > 0.0 && ratio < 1.0, "Compression ratio should be between 0 and 1");
+        }
+    }
+
+    // Combined RLE + Gzip Tests
+    mod combined_compression_tests {
+        use super::*;
+
+        #[test]
+        fn test_rle_then_gzip_compression() {
+            // Test the two-stage compression pipeline
+            let grid = create_test_grid(100, 10, "AAAAAABBBBBBCCCCCCDDDDDD      ");
+            
+            // Stage 1: RLE compression
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            
+            // Stage 2: Gzip compression of RLE data
+            let serialized_rle = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            let gzip_compressed = gzip::compress(&serialized_rle).expect("Gzip compression should succeed");
+            
+            // Decompression pipeline
+            let gzip_decompressed = gzip::decompress(&gzip_compressed).expect("Gzip decompression should succeed");
+            let rle_data = gzip::deserialize_compressed_grid(&gzip_decompressed).expect("Deserialization should succeed");
+            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            
+            assert_eq!(grid, final_grid, "Combined compression/decompression should preserve original data");
+        }
+
+        #[test]
+        fn test_combined_compression_efficiency() {
+            // Test that RLE + Gzip provides better compression than either alone
+            let grid = create_test_grid(200, 20, "████████        ████████        ");
+            
+            // Original size (approximation)
+            let original_size = grid.len() * grid[0].len() * 5; // Rough estimate for AsciiPixel serialization
+            
+            // RLE only
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            
+            // Gzip only (on original data)
+            let original_serialized = gzip::serialize_grid(&grid).expect("Grid serialization should succeed");
+            let gzip_only = gzip::compress(&original_serialized).expect("Gzip compression should succeed");
+            
+            // Combined RLE + Gzip
+            let combined = gzip::compress(&rle_serialized).expect("Combined compression should succeed");
+            
+            // Combined should be smaller than gzip-only for this repetitive pattern
+            assert!(combined.len() <= gzip_only.len(), "Combined compression should be at least as good as gzip-only");
+            
+            // Verify compression is significant
+            assert!(combined.len() < original_size / 2, "Combined compression should significantly reduce size");
+        }
+
+        #[test]
+        fn test_combined_with_colors() {
+            let grid = create_colored_test_grid(50, 10, "██  ██  ");
+            
+            // Combined compression
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
+            
+            // Decompression
+            let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
+            let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
+            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            
+            assert_eq!(grid, final_grid, "Combined compression should preserve colored data");
+            assert_eq!(rle_data.has_color, true, "Color information should be preserved");
+        }
+
+        #[test]
+        fn test_combined_alternating_pattern() {
+            // Test with a pattern that doesn't compress well with RLE
+            let grid = create_test_grid(100, 10, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+            
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
+            
+            // Decompression
+            let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
+            let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
+            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            
+            assert_eq!(grid, final_grid, "Combined compression should work even with non-repetitive patterns");
+        }
+
+        #[test]
+        fn test_compression_metadata_preservation() {
+            let grid = create_colored_test_grid(30, 20, "▓▓▓   ");
+            
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let original_width = rle_compressed.width;
+            let original_height = rle_compressed.height;
+            let original_has_color = rle_compressed.has_color;
+            
+            // Full compression/decompression cycle
+            let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            let gzip_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
+            let gzip_decompressed = gzip::decompress(&gzip_compressed).expect("Gzip decompression should succeed");
+            let rle_data = gzip::deserialize_compressed_grid(&gzip_decompressed).expect("Deserialization should succeed");
+            
+            // Verify metadata is preserved
+            assert_eq!(rle_data.width, original_width, "Width should be preserved");
+            assert_eq!(rle_data.height, original_height, "Height should be preserved");
+            assert_eq!(rle_data.has_color, original_has_color, "Color flag should be preserved");
+        }
+
+        #[test]
+        fn test_large_grid_combined_compression() {
+            // Test with a large grid to ensure scalability
+            let grid = create_test_grid(500, 100, "█████     █████     ");
+            
+            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
+            let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
+            
+            // Verify significant compression
+            let estimated_original_size = grid.len() * grid[0].len() * 5;
+            assert!(final_compressed.len() < estimated_original_size / 10, "Large repetitive grid should compress very well");
+            
+            // Verify decompression works
+            let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
+            let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
+            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            
+            assert_eq!(grid, final_grid, "Large grid should decompress correctly");
+        }
+    }
+
+    // Integration tests
     mod integration_tests {
         use super::*;
 
@@ -298,6 +505,18 @@ mod tests {
             let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
             let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(grid, decompressed);
+        }
+
+        #[test]
+        fn test_end_to_end_compression_pipeline() {
+            // Test the complete pipeline from grid to final compressed format
+            let grid = create_test_grid(100, 50, "██████      ██████      ");
+            
+            // Use the main compression interface
+            let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
+            let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            
+            assert_eq!(grid, decompressed, "End-to-end pipeline should preserve data");
         }
     }
 }
