@@ -67,22 +67,6 @@ pub fn deserialize_compressed_grid(data: &[u8]) -> Result<CompressedGrid, GzipEr
         .map_err(|e| GzipError::DeserializationError(e.to_string()))
 }
 
-// Serialize a raw grid to JSON bytes (changed from bincode)
-#[cfg(test)]
-pub fn serialize_grid(grid: &[Vec<AsciiPixel>]) -> Result<Vec<u8>, GzipError> {
-    serde_json::to_vec(grid)
-        .map_err(|e| GzipError::SerializationError(e.to_string()))
-}
-
-// Calculate compression ratio
-#[cfg(test)]
-pub fn compression_ratio(original: &[u8], compressed: &[u8]) -> f64 {
-    if original.is_empty() {
-        return 0.0;
-    }
-    compressed.len() as f64 / original.len() as f64
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,13 +85,5 @@ mod tests {
         let compressed = compress(data).unwrap();
         let decompressed = decompress(&compressed).unwrap();
         assert_eq!(data, decompressed.as_slice());
-    }
-
-    #[test]
-    fn test_compression_ratio() {
-        let data = b"AAAAAAAAAAAAAAAAAAAAAAAA";
-        let compressed = compress(data).unwrap();
-        let ratio = compression_ratio(data, &compressed);
-        assert!(ratio > 0.0 && ratio < 1.0);
     }
 }

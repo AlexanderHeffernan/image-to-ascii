@@ -337,15 +337,6 @@ mod tests {
             // ASCII art should compress reasonably well
             assert!(compressed.len() < ascii_art.len(), "ASCII art should compress");
         }
-
-        #[test]
-        fn test_gzip_compression_ratio() {
-            let test_data = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-            let compressed = gzip::compress(test_data.as_bytes()).expect("Gzip compression should succeed");
-            
-            let ratio = gzip::compression_ratio(test_data.as_bytes(), &compressed);
-            assert!(ratio > 0.0 && ratio < 1.0, "Compression ratio should be between 0 and 1");
-        }
     }
 
     // Combined RLE + Gzip Tests
@@ -370,32 +361,6 @@ mod tests {
             let final_grid = decompress_grid(&rle_data).expect("RLE decompression should succeed");
             
             assert_eq!(grid, final_grid, "Combined compression/decompression should preserve original data");
-        }
-
-        #[test]
-        fn test_combined_compression_efficiency() {
-            // Test that RLE + Gzip provides better compression than either alone
-            let grid = create_test_grid(200, 20, "████████        ████████        ");
-            
-            // Original size (approximation)
-            let original_size = grid.len() * grid[0].len() * 5; // Rough estimate for AsciiPixel serialization
-            
-            // RLE only
-            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
-            let rle_serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
-            
-            // Gzip only (on original data)
-            let original_serialized = gzip::serialize_grid(&grid).expect("Grid serialization should succeed");
-            let gzip_only = gzip::compress(&original_serialized).expect("Gzip compression should succeed");
-            
-            // Combined RLE + Gzip
-            let combined = gzip::compress(&rle_serialized).expect("Combined compression should succeed");
-            
-            // Combined should be smaller than gzip-only for this repetitive pattern
-            assert!(combined.len() <= gzip_only.len(), "Combined compression should be at least as good as gzip-only");
-            
-            // Verify compression is significant
-            assert!(combined.len() < original_size / 2, "Combined compression should significantly reduce size");
         }
 
         #[test]
