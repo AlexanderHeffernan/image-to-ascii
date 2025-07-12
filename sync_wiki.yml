@@ -1,0 +1,30 @@
+name: Sync Wiki
+on:
+  push:
+    paths:
+      - 'docs/**'
+    branches:
+      - main
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Clone wiki repository
+        run: |
+          git clone https://github.com/AlexanderHeffernan/image-to-ascii/.wiki.git wiki
+          
+      - name: Copy documentation
+        run: |
+          cp -r docs/* wiki/
+          
+      - name: Push to wiki
+        run: |
+          cd wiki
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git diff --staged --quiet || git commit -m "Auto-sync from docs folder"
+          git push
