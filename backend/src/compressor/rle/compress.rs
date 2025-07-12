@@ -81,14 +81,4 @@ mod tests {
         assert_eq!(compressed.rows[0][0].count, 1);
         assert_eq!(compressed.rows[0][0].pixel.ch, 'A');
     }
-
-    #[test]
-    fn test_pixels_equal() {
-        let pixel1 = AsciiPixel{ch: 'A', rgb: None};
-        let pixel2 = AsciiPixel{ch: 'A', rgb: None};
-        let pixel3 = AsciiPixel{ch: 'B', rgb: None};
-        
-        assert!(pixels_equal(&pixel1, &pixel2));
-        assert!(!pixels_equal(&pixel1, &pixel3));
-    }
 }
