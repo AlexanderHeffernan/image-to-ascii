@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::converter::ascii_pixel::AsciiPixel;
-    use crate::compressor::rle;
+    use crate::converter::AsciiPixel;
     use crate::compressor::gzip;
     use crate::compressor::rle::compress_grid;
     use crate::compressor::rle::decompress_grid;

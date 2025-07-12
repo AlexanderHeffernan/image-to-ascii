@@ -1,4 +1,4 @@
-use crate::converter::ascii_pixel::AsciiPixel;
+use crate::converter::AsciiPixel;
 use std::fmt;
 use serde::{Serialize, Deserialize};
 
@@ -32,15 +32,14 @@ impl CompressedGrid {
 
 /// Errors that can occur during compression/decompression
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum CompressionError {
-    InvalidGrid(String),
     DecompressionError(String),
 }
 
 impl fmt::Display for CompressionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CompressionError::InvalidGrid(msg) => write!(f, "Invalid grid: {}", msg),
             CompressionError::DecompressionError(msg) => write!(f, "Decompression error: {}", msg),
         }
     }

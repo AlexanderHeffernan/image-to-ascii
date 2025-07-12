@@ -1,10 +1,16 @@
-use crate::converter::ascii_pixel::AsciiPixel;
 use crate::compressor::rle::CompressedGrid;
-use flate2::read::{GzDecoder, GzEncoder};
+use flate2::read::GzEncoder;
 use flate2::Compression;
 use std::io::Read;
 
+#[cfg(test)]
+use crate::converter::AsciiPixel;
+
+#[cfg(test)]
+use flate2::read::GzDecoder;
+
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum GzipError {
     CompressionError(String),
     DecompressionError(String),
@@ -37,6 +43,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>, GzipError> {
 }
 
 // Basic gzip decompression of byte data
+#[cfg(test)]
 pub fn decompress(compressed: &[u8]) -> Result<Vec<u8>, GzipError> {
     let mut decoder = GzDecoder::new(compressed);
     let mut decompressed = Vec::new();
@@ -54,18 +61,21 @@ pub fn serialize_compressed_grid(grid: &CompressedGrid) -> Result<Vec<u8>, GzipE
 }
 
 // Deserialize JSON bytes back to CompressedGrid (changed from bincode)
+#[cfg(test)]
 pub fn deserialize_compressed_grid(data: &[u8]) -> Result<CompressedGrid, GzipError> {
     serde_json::from_slice(data)
         .map_err(|e| GzipError::DeserializationError(e.to_string()))
 }
 
 // Serialize a raw grid to JSON bytes (changed from bincode)
+#[cfg(test)]
 pub fn serialize_grid(grid: &[Vec<AsciiPixel>]) -> Result<Vec<u8>, GzipError> {
     serde_json::to_vec(grid)
         .map_err(|e| GzipError::SerializationError(e.to_string()))
 }
 
 // Calculate compression ratio
+#[cfg(test)]
 pub fn compression_ratio(original: &[u8], compressed: &[u8]) -> f64 {
     if original.is_empty() {
         return 0.0;

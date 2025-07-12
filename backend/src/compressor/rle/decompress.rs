@@ -1,4 +1,4 @@
-use crate::converter::ascii_pixel::AsciiPixel;
+use crate::converter::AsciiPixel;
 use crate::compressor::rle::types::{CompressedGrid, CompressionError};
 
 /// Decompress a compressed grid back to the original ASCII grid
@@ -54,7 +54,7 @@ fn decompress_row(compressed_row: &[super::types::RleEntry]) -> Result<Vec<Ascii
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::converter::ascii_pixel::AsciiPixel;
+    use crate::converter::AsciiPixel;
     use crate::compressor::rle::types::{CompressedGrid, RleEntry};
     use crate::compressor::rle::compress::compress_grid;
 

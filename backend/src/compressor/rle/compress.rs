@@ -1,4 +1,4 @@
-use crate::converter::ascii_pixel::AsciiPixel;
+use crate::converter::AsciiPixel;
 use crate::compressor::rle::types::{RleEntry, CompressedGrid, CompressionError};
 
 /// Compress an ASCII grid using run-length encoding
@@ -60,7 +60,7 @@ fn pixels_equal(a: &AsciiPixel, b: &AsciiPixel) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::converter::ascii_pixel::AsciiPixel;
+    use crate::converter::AsciiPixel;
 
     #[test]
     fn test_empty_grid() {
