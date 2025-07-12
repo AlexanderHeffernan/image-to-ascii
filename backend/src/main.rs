@@ -103,13 +103,13 @@ async fn convert_image_route(payload: Multipart) -> rusty_api::HttpResponse {
                     Ok(compressed) => {
                         let original_size = serde_json::to_string(&ascii_grid).unwrap_or_default().len();
                         let compressed_size = compressed.len();
-                        let ratio = compressed_size as f64 / original_size as f64;
-                        logger.info(format!("Compression ratio: {:.2}% ({} -> {} bytes)", 
-                            ratio * 100.0, original_size, compressed_size));
+                        let compression_percentage = ((original_size - compressed_size) as f64 / original_size as f64) * 100.0;
+                        logger.info(format!("Compressed by {:.1}% ({} -> {} bytes)", 
+                            compression_percentage, original_size, compressed_size));
                         
                         // Create a custom header string to include compression info
-                        let compression_header = format!("rle-gzip;original={};compressed={};ratio={:.2}", 
-                            original_size, compressed_size, ratio);
+                        let compression_header = format!("rle-gzip;original={};compressed={};percentage={:.1}", 
+                            original_size, compressed_size, compression_percentage);
                         
                         rusty_api::HttpResponse::Ok()
                             .content_type("application/octet-stream")
