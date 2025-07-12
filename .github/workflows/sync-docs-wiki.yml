@@ -79,7 +79,8 @@ jobs:
           if [ -f /tmp/sections.txt ]; then
             # Get unique sections
             cut -d'|' -f1 /tmp/sections.txt | sort -u | while read section; do
-              echo "### $section" >> wiki/Home.md
+              section_link=$(echo "$section" | sed 's/ /_/g')
+              echo "### [$section]($section_link)" >> wiki/Home.md
               echo "" >> wiki/Home.md
               
               # Get pages for this section
@@ -91,17 +92,16 @@ jobs:
             done
           fi
           
-          # Create Sidebar
+          # Create Sidebar (no heading)
           cat > wiki/_Sidebar.md << 'EOF'
-          ## Navigate
-          
           EOF
           
           # Process sections for Sidebar
           if [ -f /tmp/sections.txt ]; then
             # Get unique sections
             cut -d'|' -f1 /tmp/sections.txt | sort -u | while read section; do
-              echo "**$section**" >> wiki/_Sidebar.md
+              section_link=$(echo "$section" | sed 's/ /_/g')
+              echo "**[$section]($section_link)**" >> wiki/_Sidebar.md
               
               # Get pages for this section
               grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_link; do
