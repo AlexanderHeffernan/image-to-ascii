@@ -1,0 +1,1 @@
+# Compression of ASCII Grid
