@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.WIKI_TOKEN }}  # Changed from GITHUB_TOKEN
+          token: ${{ secrets.WIKI_TOKEN }}
           
       - name: Clone wiki repository
         run: |
@@ -21,20 +21,97 @@ jobs:
           
       - name: Process and copy documentation
         run: |
-          # Clear existing wiki content
-          rm -rf wiki/*
+          # Clear existing wiki content (but keep .git folder)
+          find wiki -type f -name "*.md" -delete
           
           # Process markdown files
           find docs -name "*.md" | while read file; do
-            # Create wiki-friendly filename
+            # Get filename without extension
             filename=$(basename "$file" .md)
-            wiki_name=$(echo "$filename" | sed 's/backend\./Backend-/g' | sed 's/frontend\./Frontend-/g')
+            
+            # Convert filename to wiki format (e.g., "backend.api" -> "Backend - Api")
+            wiki_name=$(echo "$filename" | sed 's/\./ - /g' | sed 's/\b\w/\U&/g')
             
             # Remove YAML frontmatter and copy
             sed '/^---$/,/^---$/d' "$file" > "wiki/${wiki_name}.md"
             
             echo "Processed: $file -> wiki/${wiki_name}.md"
           done
+          
+      - name: Generate table of contents and sidebar
+        run: |
+          # Create arrays to store processed files
+          declare -A sections
+          
+          # Process files and group by section
+          find docs -name "*.md" | while read file; do
+            filename=$(basename "$file" .md)
+            
+            # Extract section and page name
+            if [[ "$filename" == *.* ]]; then
+              section=$(echo "$filename" | cut -d'.' -f1 | sed 's/\b\w/\U&/g')
+              page=$(echo "$filename" | cut -d'.' -f2- | sed 's/\./ /g' | sed 's/\b\w/\U&/g')
+              wiki_name=$(echo "$filename" | sed 's/\./ - /g' | sed 's/\b\w/\U&/g')
+              
+              # Add to sections array (simulate with file)
+              echo "$section|$page|$wiki_name" >> /tmp/sections.txt
+            else
+              # Root level file
+              section="General"
+              page=$(echo "$filename" | sed 's/\b\w/\U&/g')
+              wiki_name="$page"
+              
+              echo "$section|$page|$wiki_name" >> /tmp/sections.txt
+            fi
+          done
+          
+          # Create Table of Contents (Home page)
+          cat > wiki/Home.md << 'EOF'
+          # Image-to-ASCII Documentation
+          
+          Welcome to the Image-to-ASCII project documentation. This project converts images to ASCII art with customizable parameters.
+          
+          EOF
+          
+          # Process sections for TOC
+          if [ -f /tmp/sections.txt ]; then
+            # Get unique sections
+            cut -d'|' -f1 /tmp/sections.txt | sort -u | while read section; do
+              echo "## $section" >> wiki/Home.md
+              echo "" >> wiki/Home.md
+              
+              # Get pages for this section
+              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_name; do
+                echo "- [$page]($wiki_name)" >> wiki/Home.md
+              done
+              
+              echo "" >> wiki/Home.md
+            done
+          fi
+          
+          # Create Sidebar
+          cat > wiki/_Sidebar.md << 'EOF'
+          ## Documentation
+          
+          EOF
+          
+          # Process sections for Sidebar
+          if [ -f /tmp/sections.txt ]; then
+            # Get unique sections
+            cut -d'|' -f1 /tmp/sections.txt | sort -u | while read section; do
+              echo "**$section**" >> wiki/_Sidebar.md
+              
+              # Get pages for this section
+              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_name; do
+                echo "- [$page]($wiki_name)" >> wiki/_Sidebar.md
+              done
+              
+              echo "" >> wiki/_Sidebar.md
+            done
+          fi
+          
+          # Clean up
+          rm -f /tmp/sections.txt
           
       - name: Push to wiki
         run: |
@@ -43,7 +120,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           
-          # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
