@@ -1,5 +1,6 @@
 mod converter;
 mod request_logger;
+mod compressor;
 
 use rusty_api;
 use actix_multipart::Multipart;
