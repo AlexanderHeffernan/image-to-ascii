@@ -1,6 +1,5 @@
 pub mod rle;
 pub mod gzip;
-pub mod error;
 
 #[cfg(test)]
 mod tests;
