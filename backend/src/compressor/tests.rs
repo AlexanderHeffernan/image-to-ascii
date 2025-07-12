@@ -4,8 +4,8 @@ mod tests {
     use crate::converter::ascii_pixel::AsciiPixel;
     use crate::compressor::rle;
     use crate::compressor::gzip;
-    use crate::compressor::compress_ascii_grid;
-    use crate::compressor::decompress_ascii_grid;
+    use crate::compressor::rle::compress_grid;
+    use crate::compressor::rle::decompress_grid;
 
     // Helper function to create test ASCII grids
     fn create_test_grid(width: usize, height: usize, pattern: &str) -> Vec<Vec<AsciiPixel>> {
@@ -71,7 +71,7 @@ mod tests {
         #[test]
         fn test_rle_simple_compression() {
             let grid = create_test_grid(10, 1, "AAABBBCCCC");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             // Verify the compressed format
             assert_eq!(compressed.width, 10);
@@ -98,14 +98,14 @@ mod tests {
             assert_eq!(first_row[2].pixel.rgb, None);
 
             // Verify the original grid can be reconstructed
-            let decompressed = rle::decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(decompressed, grid, "Decompressed grid should match original grid");
         }
 
         #[test]
         fn test_rle_format_no_compression() {
             let grid = create_test_grid(6, 1, "ABCDEF");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
 
             let first_row = &compressed.rows[0];
             assert_eq!(first_row.len(), 6, "Should have 6 RLE entries");
@@ -118,7 +118,7 @@ mod tests {
             }
 
             // Verify the original grid can be reconstructed
-            let decompressed = rle::decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(decompressed, grid, "Decompressed grid should match original grid");
         }
 
@@ -126,7 +126,7 @@ mod tests {
         fn test_rle_format_single_character() {
             // Test: 10 A's should compress to [(10, 'A')]
             let grid = create_test_grid(10, 1, "A");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
 
             let first_row = &compressed.rows[0];
             assert_eq!(first_row.len(), 1, "Should have 1 RLE entry");
@@ -135,7 +135,7 @@ mod tests {
             assert_eq!(first_row[0].pixel.rgb, None);
 
             // Verify the original grid can be reconstructed
-            let decompressed = rle::decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(decompressed, grid, "Decompressed grid should match original grid");
         }
 
@@ -143,7 +143,7 @@ mod tests {
         fn test_rle_format_multiple_rows() {
             // Test 2 rows: first row "AAA", second row "BBB"
             let grid = create_test_grid(3, 2, "AAABBB");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             assert_eq!(compressed.rows.len(), 2);
             
@@ -158,7 +158,7 @@ mod tests {
             assert_eq!(compressed.rows[1][0].pixel.ch, 'B');
 
             // Verify the original grid can be reconstructed
-            let decompressed = rle::decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(decompressed, grid, "Decompressed grid should match original grid");
         }
 
@@ -175,7 +175,7 @@ mod tests {
                 ('B', Some(blue)),
             ]);
             
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             assert_eq!(compressed.has_color, true);
             assert_eq!(compressed.rows[0].len(), 2);
@@ -204,7 +204,7 @@ mod tests {
                 ('A', None),
             ]);
             
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             assert_eq!(compressed.rows[0].len(), 2, "Should have 2 entries (not compressed across color boundary)");
             
@@ -222,7 +222,7 @@ mod tests {
         #[test]
         fn test_rle_format_empty_grid() {
             let grid: Vec<Vec<AsciiPixel>> = vec![];
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             assert_eq!(compressed.width, 0);
             assert_eq!(compressed.height, 0);
@@ -234,7 +234,7 @@ mod tests {
         fn test_rle_format_alternating_pattern() {
             // Test: "ABABAB" should compress to [(1, 'A'), (1, 'B'), (1, 'A'), (1, 'B'), (1, 'A'), (1, 'B')]
             let grid = create_test_grid(6, 1, "ABABAB");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             let first_row = &compressed.rows[0];
             assert_eq!(first_row.len(), 6, "Alternating pattern should not compress");
@@ -249,14 +249,14 @@ mod tests {
         fn test_rle_compression_efficiency() {
             // Test that RLE actually reduces the number of entries
             let grid = create_test_grid(100, 1, "A");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             // 100 identical characters should compress to 1 entry
             assert_eq!(compressed.rows[0].len(), 1);
             assert_eq!(compressed.rows[0][0].count, 100);
             
             // Verify round-trip works
-            let decompressed = rle::decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(grid, decompressed);
         }
 
@@ -264,7 +264,7 @@ mod tests {
         fn test_rle_large_count() {
             // Test with very large run lengths
             let grid = create_test_grid(10000, 1, "X");
-            let compressed = rle::compress_ascii_grid(&grid).expect("Compression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
             
             assert_eq!(compressed.rows[0].len(), 1);
             assert_eq!(compressed.rows[0][0].count, 10000);
@@ -360,7 +360,7 @@ mod tests {
             let grid = create_test_grid(100, 10, "AAAAAABBBBBBCCCCCCDDDDDD      ");
             
             // Stage 1: RLE compression
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             
             // Stage 2: Gzip compression of RLE data
             let serialized_rle = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
@@ -369,7 +369,7 @@ mod tests {
             // Decompression pipeline
             let gzip_decompressed = gzip::decompress(&gzip_compressed).expect("Gzip decompression should succeed");
             let rle_data = gzip::deserialize_compressed_grid(&gzip_decompressed).expect("Deserialization should succeed");
-            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            let final_grid = decompress_grid(&rle_data).expect("RLE decompression should succeed");
             
             assert_eq!(grid, final_grid, "Combined compression/decompression should preserve original data");
         }
@@ -383,7 +383,7 @@ mod tests {
             let original_size = grid.len() * grid[0].len() * 5; // Rough estimate for AsciiPixel serialization
             
             // RLE only
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             let rle_serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
             
             // Gzip only (on original data)
@@ -405,14 +405,14 @@ mod tests {
             let grid = create_colored_test_grid(50, 10, "██  ██  ");
             
             // Combined compression
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
             let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
             
             // Decompression
             let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
             let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
-            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            let final_grid = decompress_grid(&rle_data).expect("RLE decompression should succeed");
             
             assert_eq!(grid, final_grid, "Combined compression should preserve colored data");
             assert_eq!(rle_data.has_color, true, "Color information should be preserved");
@@ -423,14 +423,14 @@ mod tests {
             // Test with a pattern that doesn't compress well with RLE
             let grid = create_test_grid(100, 10, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
             
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
             let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
             
             // Decompression
             let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
             let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
-            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            let final_grid = decompress_grid(&rle_data).expect("RLE decompression should succeed");
             
             assert_eq!(grid, final_grid, "Combined compression should work even with non-repetitive patterns");
         }
@@ -439,7 +439,7 @@ mod tests {
         fn test_compression_metadata_preservation() {
             let grid = create_colored_test_grid(30, 20, "▓▓▓   ");
             
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             let original_width = rle_compressed.width;
             let original_height = rle_compressed.height;
             let original_has_color = rle_compressed.has_color;
@@ -461,7 +461,7 @@ mod tests {
             // Test with a large grid to ensure scalability
             let grid = create_test_grid(500, 100, "█████     █████     ");
             
-            let rle_compressed = rle::compress_ascii_grid(&grid).expect("RLE compression should succeed");
+            let rle_compressed = compress_grid(&grid).expect("RLE compression should succeed");
             let serialized = gzip::serialize_compressed_grid(&rle_compressed).expect("Serialization should succeed");
             let final_compressed = gzip::compress(&serialized).expect("Gzip compression should succeed");
             
@@ -472,7 +472,7 @@ mod tests {
             // Verify decompression works
             let decompressed_gzip = gzip::decompress(&final_compressed).expect("Gzip decompression should succeed");
             let rle_data = gzip::deserialize_compressed_grid(&decompressed_gzip).expect("Deserialization should succeed");
-            let final_grid = rle::decompress_ascii_grid(&rle_data).expect("RLE decompression should succeed");
+            let final_grid = decompress_grid(&rle_data).expect("RLE decompression should succeed");
             
             assert_eq!(grid, final_grid, "Large grid should decompress correctly");
         }
@@ -486,24 +486,24 @@ mod tests {
         fn test_typical_ascii_art_pattern() {
             // Test a pattern that's common in ASCII art
             let grid = create_test_grid(50, 10, "   ###   @@@   ");
-            let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
-            let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(grid, decompressed);
         }
 
         #[test]
         fn test_colored_ascii_art() {
             let grid = create_colored_test_grid(20, 5, "█▓▒░");
-            let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
-            let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(grid, decompressed);
         }
 
         #[test]
         fn test_mixed_patterns() {
             let grid = create_test_grid(30, 15, "AAAAABBBBCCCCCDDDDDEEEEE     ");
-            let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
-            let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             assert_eq!(grid, decompressed);
         }
 
@@ -513,8 +513,8 @@ mod tests {
             let grid = create_test_grid(100, 50, "██████      ██████      ");
             
             // Use the main compression interface
-            let compressed = compress_ascii_grid(&grid).expect("Compression should succeed");
-            let decompressed = decompress_ascii_grid(&compressed).expect("Decompression should succeed");
+            let compressed = compress_grid(&grid).expect("Compression should succeed");
+            let decompressed = decompress_grid(&compressed).expect("Decompression should succeed");
             
             assert_eq!(grid, decompressed, "End-to-end pipeline should preserve data");
         }
