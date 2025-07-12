@@ -1,0 +1,52 @@
+name: Sync Wiki
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/sync-docs-wiki.yml'
+    branches:
+      - main
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Clone wiki repository
+        run: |
+          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git wiki
+          
+      - name: Process and copy documentation
+        run: |
+          # Clear existing wiki content
+          rm -rf wiki/*
+          
+          # Process markdown files
+          find docs -name "*.md" | while read file; do
+            # Create wiki-friendly filename
+            filename=$(basename "$file" .md)
+            wiki_name=$(echo "$filename" | sed 's/backend\./Backend-/g' | sed 's/frontend\./Frontend-/g')
+            
+            # Remove YAML frontmatter and copy
+            sed '/^---$/,/^---$/d' "$file" > "wiki/${wiki_name}.md"
+            
+            echo "Processed: $file -> wiki/${wiki_name}.md"
+          done
+          
+      - name: Push to wiki
+        run: |
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-sync from docs folder"
+            git push
+          fi
