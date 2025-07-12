@@ -24,8 +24,8 @@ jobs:
           # Clear existing wiki content (but keep .git folder)
           find wiki -type f -name "*.md" -delete
           
-          # Process markdown files
-          find docs -name "*.md" | while read file; do
+          # Process markdown files (excluding root.md)
+          find docs -name "*.md" | grep -v "root.md" | while read file; do
             # Get filename without extension
             filename=$(basename "$file" .md)
             
@@ -40,11 +40,8 @@ jobs:
           
       - name: Generate table of contents and sidebar
         run: |
-          # Create arrays to store processed files
-          declare -A sections
-          
-          # Process files and group by section
-          find docs -name "*.md" | while read file; do
+          # Process files and group by section (excluding root.md)
+          find docs -name "*.md" | grep -v "root.md" | while read file; do
             filename=$(basename "$file" .md)
             
             # Extract section and page name
@@ -52,20 +49,14 @@ jobs:
               section=$(echo "$filename" | cut -d'.' -f1 | sed 's/\b\w/\U&/g')
               page=$(echo "$filename" | cut -d'.' -f2- | sed 's/\./ /g' | sed 's/\b\w/\U&/g')
               wiki_name=$(echo "$filename" | sed 's/\./ - /g' | sed 's/\b\w/\U&/g')
+              wiki_link=$(echo "$wiki_name" | sed 's/ /_/g')  # Convert spaces to underscores for links
               
               # Add to sections array (simulate with file)
-              echo "$section|$page|$wiki_name" >> /tmp/sections.txt
-            else
-              # Root level file
-              section="General"
-              page=$(echo "$filename" | sed 's/\b\w/\U&/g')
-              wiki_name="$page"
-              
-              echo "$section|$page|$wiki_name" >> /tmp/sections.txt
+              echo "$section|$page|$wiki_link" >> /tmp/sections.txt
             fi
           done
           
-          # Create Table of Contents (Home page)
+          # Create Home page with root.md content
           cat > wiki/Home.md << 'EOF'
           # Image-to-ASCII Documentation
           
@@ -73,16 +64,27 @@ jobs:
           
           EOF
           
+          # Add root.md content if it exists
+          if [ -f "docs/root.md" ]; then
+            # Remove YAML frontmatter and add to Home page
+            sed '/^---$/,/^---$/d' docs/root.md | tail -n +2 >> wiki/Home.md
+            echo "" >> wiki/Home.md
+          fi
+          
+          # Add Table of Contents
+          echo "## Table of Contents" >> wiki/Home.md
+          echo "" >> wiki/Home.md
+          
           # Process sections for TOC
           if [ -f /tmp/sections.txt ]; then
             # Get unique sections
             cut -d'|' -f1 /tmp/sections.txt | sort -u | while read section; do
-              echo "## $section" >> wiki/Home.md
+              echo "### $section" >> wiki/Home.md
               echo "" >> wiki/Home.md
               
               # Get pages for this section
-              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_name; do
-                echo "- [$page]($wiki_name)" >> wiki/Home.md
+              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_link; do
+                echo "- [$page]($wiki_link)" >> wiki/Home.md
               done
               
               echo "" >> wiki/Home.md
@@ -91,7 +93,7 @@ jobs:
           
           # Create Sidebar
           cat > wiki/_Sidebar.md << 'EOF'
-          ## Documentation
+          ## Navigate
           
           EOF
           
@@ -102,8 +104,8 @@ jobs:
               echo "**$section**" >> wiki/_Sidebar.md
               
               # Get pages for this section
-              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_name; do
-                echo "- [$page]($wiki_name)" >> wiki/_Sidebar.md
+              grep "^$section|" /tmp/sections.txt | while IFS='|' read sec page wiki_link; do
+                echo "- [$page]($wiki_link)" >> wiki/_Sidebar.md
               done
               
               echo "" >> wiki/_Sidebar.md
