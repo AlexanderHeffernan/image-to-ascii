@@ -205,7 +205,7 @@ const submitImgToConverter = async () => {
         }));
         
         // Send POST request to conversion endpoint
-        const response = await fetch('https://meerkat-flowing-blatantly.ngrok-free.app/convert-image', {
+        const response = await fetch('https://api.alexheffernan.dev/convert-image', {
             method: 'POST',
             body: formData,
         });
